@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+
+# Data files (keep repo lightweight)
+*.xlsx
+*.xls
+*.csv
+*.json
+*.zip
+!pipeline_data.zip
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

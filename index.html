@@ -223,6 +223,7 @@ table.t tr:hover td{background:var(--surf2)}
     <button class="nt" onclick="gp(&#39;salesconfig&#39;,this)">Sales Config</button>
     <button class="nt" onclick="gp(&#39;stockcfg&#39;,this)">Stock Config</button>
     <button class="nt" onclick="gp(&#39;replenishment&#39;,this)">Replenishment</button>
+    <button class="nt" onclick="gp(&#39;converter&#39;,this)" style="color:#60a5fa;font-weight:600">⚡ Converter</button>
   </div>
   <div class="nav-right">
     <span class="skubadge" id="sku-badge">35,063 SKUs</span>
@@ -1262,6 +1263,7 @@ function gp(id, btn) {
   if (id === 'stockcfg') scRender();
   if (id === 'salesconfig') salesCfgRender();
   if (id === 'checklist') ckRestoreList();
+  if (id === 'converter') renderStreamlitFrame();
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -3590,6 +3592,68 @@ document.addEventListener('visibilitychange', function() {
 });
 
 // ════════════════════════════════════════════════════════════════
+
+// ── Streamlit Converter Tab Helpers ──────────────────────────────
+function getStreamlitUrl() {
+  return localStorage.getItem('ros_st_url') || '';
+}
+function saveStreamlitUrl(url) {
+  url = (url || '').trim();
+  if (url && !/^https?:\/\//i.test(url)) url = 'https://' + url;
+  localStorage.setItem('ros_st_url', url);
+  renderStreamlitFrame();
+}
+function applyStreamlitUrl() {
+  var inp = document.getElementById('st-url-inp');
+  if (inp) saveStreamlitUrl(inp.value);
+}
+function renderStreamlitFrame() {
+  var url = getStreamlitUrl();
+  var inp = document.getElementById('st-url-inp');
+  var iframe = document.getElementById('st-iframe');
+  var placeholder = document.getElementById('st-placeholder');
+  var extBtn = document.getElementById('st-ext-btn');
+  if (inp && url) inp.value = url;
+  if (extBtn) { extBtn.href = url || '#'; extBtn.style.opacity = url ? '1' : '0.5'; }
+  if (url) {
+    var embedUrl = url;
+    if (embedUrl.indexOf('?') === -1) embedUrl += '?embed=true';
+    else if (embedUrl.indexOf('embed=true') === -1) embedUrl += '&embed=true';
+    if (iframe) {
+      if (iframe.src !== embedUrl) iframe.src = embedUrl;
+      iframe.style.display = 'block';
+    }
+    if (placeholder) placeholder.style.display = 'none';
+  } else {
+    if (iframe) iframe.style.display = 'none';
+    if (placeholder) placeholder.style.display = 'flex';
+  }
+}
+
+
+// ── Streamlit Auto-Sync Event Listener ────────────────────────────
+window.addEventListener('message', function(event) {
+  if (event.data && event.data.type === 'REPLENISHMENT_AUTO_LOAD') {
+    var raw = event.data.data;
+    var filename = event.data.filename || 'converted_pipeline.json';
+    if (raw && (Array.isArray(raw) || Array.isArray(raw.rows))) {
+      var records = Array.isArray(raw) ? raw : raw.rows.map(function(r) {
+        var o = {}; raw.headers.forEach(function(h, i) { o[h] = r[i]; }); return o;
+      });
+      if (records.length) {
+        R = records;
+        idbSaveFile(JSON.stringify(records), filename, true);
+        _onDataLoaded(filename, false);
+        // Automatically switch to Intelligence view
+        var intelBtn = document.querySelector('.nt[onclick*="intel"]');
+        gp('intel', intelBtn);
+        // Show success indicator
+        lsSaveIndicator('Auto-synced ' + R.length.toLocaleString() + ' SKUs from Converter');
+      }
+    }
+  }
+});
+
 //  INIT
 // ════════════════════════════════════════════════════════════════
 scRender();

@@ -107,7 +107,27 @@ if uploaded_file:
         wb_out.save(excel_buf)
         excel_buf.seek(0)
         
-    st.success(f"✓ Transformation complete! Processed **{total_skus:,} SKUs** across **{len(unique_styles):,} Styles**.")
+    
+    st.success(f"✓ Converted **{total_skus:,} SKUs** across **{len(unique_styles):,} Styles**.")
+    
+    # ── Automatic Real-Time Push to ReplenishmentOS Dashboard ──
+    import streamlit.components.v1 as components
+    components.html(f"""
+    <script>
+      try {
+        var payload = {
+          type: 'REPLENISHMENT_AUTO_LOAD',
+          data: {json_str},
+          filename: '{uploaded_file.name}'
+        };
+        window.top.postMessage(payload, '*');
+      } catch(e) {
+        console.warn('Auto-postMessage error:', e);
+      }
+    </script>
+    """, height=0)
+    
+    st.info("🚀 **Automatically loaded into your ReplenishmentOS dashboard!** Click the **Intelligence** or **Dashboard** tab above to view your data.")
     
     st.subheader("⬇ Download Formats")
     c1, c2, c3 = st.columns(3)
